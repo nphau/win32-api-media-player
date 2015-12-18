@@ -120,10 +120,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		DialogBox(hInst, MAKEINTRESOURCE(IDD_DIALOG_MEDIA_PLAYER), hWnd, MediaPlayer);
 		break;
 	case WM_DESTROY:
-		// Closes an MCI device or file associated
-		if (hMCIWnd != NULL)
-			MCIWndDestroy(hMCIWnd);
-		PostQuitMessage(0);
+		OnDestroy();
 		break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);

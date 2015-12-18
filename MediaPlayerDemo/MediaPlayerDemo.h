@@ -16,16 +16,21 @@ BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 
 /*
- * The process which is using for playing songs
+ * Identify the mode of Devides
  */
-BOOL OnPlay()
+BOOL IsPlayOrPause()
 {
-	if (hMCIWnd != NULL)
+	TCHAR * szMode = new TCHAR[100];
+	LONG  IsMode = MCIWndGetMode(hMCIWnd, szMode, 100);
+	switch (IsMode)
 	{
+	case MCI_MODE_OPEN: case MCI_MODE_PAUSE: case MCI_MODE_STOP:
 		MCIWndPlay(hMCIWnd);
 		return TRUE;
+	case MCI_MODE_PLAY:
+		MCIWndPause(hMCIWnd);
+		return FALSE;
 	}
-	return FALSE;
 }
 
 /*
@@ -36,9 +41,23 @@ BOOL OnOpen(HWND hDlg)
 	// Check if It can be open
 	if (IsOpenNewSong(hDlg) == TRUE)
 	{
+		SendMessage(hDlg, WM_COMMAND, IDC_BTN_STOP, 0);
+
 		if (hMCIWnd != NULL)
-			MCIWndOpenDialog(hMCIWnd);
-		
+		{
+			szFileName = new TCHAR[MAX_PATH];
+
+			if (MCIWndOpenDialog(hMCIWnd) == 0)
+			{
+				// Get file name
+				MCIWndGetFileName(hMCIWnd, szFileName, MAX_PATH);
+			}
+			else
+			{
+				wcscpy(szFileName, szTitle);
+			}
+		}
+
 		return TRUE;
 	}
 	return FALSE;
@@ -49,21 +68,14 @@ BOOL OnOpen(HWND hDlg)
 */
 BOOL OnStop()
 {
-	if (hMCIWnd != NULL)
-	{
-		MCIWndStop(hMCIWnd);
-		return TRUE;
-	}
-	return FALSE;
+	MCIWndStop(hMCIWnd);
+	return TRUE;
 }
-
 
 void OnPrev()
 {
 
 }
-
-
 
 void OnNext()
 {
@@ -98,11 +110,24 @@ INT_PTR CALLBACK MediaPlayer(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 {
 	UNREFERENCED_PARAMETER(lParam);
 
+	HANDLE hIcon = NULL;
 	switch (message)
 	{
 	case WM_INITDIALOG:
+
+		// Set Icon for Dialog
+		hIcon = LoadImage(hInst,
+			MAKEINTRESOURCE(IDI_SMALL),
+			IMAGE_ICON,
+			GetSystemMetrics(SM_CXSMICON),
+			GetSystemMetrics(SM_CYSMICON),
+			0);
+
+		if (hIcon) SendMessage(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+
 		// To create a new MCIWndClass
 		return OnInitCreateWnd(hDlg, hInst);
+
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
@@ -113,7 +138,13 @@ INT_PTR CALLBACK MediaPlayer(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 		case IDC_BTN_OPEN:
 			// Open new file
 			if (OnOpen(hDlg) == TRUE)
+			{
 				EnableWindow(GetDlgItem(hDlg, IDC_BTN_PLAY), TRUE);
+				SetWindowTextW(hDlg, szFileName);
+
+				// To force press Play Button
+				SendMessage(hDlg, WM_COMMAND, IDC_BTN_PLAY, 0);
+			}
 			break;
 		case IDC_BTN_STOP:
 			if (OnStop() == TRUE)
@@ -123,22 +154,25 @@ INT_PTR CALLBACK MediaPlayer(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 				EnableWindow(GetDlgItem(hDlg, IDC_BTN_NEXT), FALSE);
 				EnableWindow(GetDlgItem(hDlg, IDC_BTN_VOLUP), FALSE);
 				EnableWindow(GetDlgItem(hDlg, IDC_BTN_VOLDOWN), FALSE);
+				SetDlgItemTextW(hDlg, IDC_BTN_PLAY, L"Play");
 			}
 			break;
 		case IDC_BTN_PREV:
-		
+
 			break;
 		case IDC_BTN_PLAY:
-			if (OnPlay() == TRUE)
-			{
-				SetDlgItemText(GetDlgItem(hDlg, IDC_BTN_PLAY), IDC_BTN_PLAY, L"Pause");
-				
-				EnableWindow(GetDlgItem(hDlg, IDC_BTN_STOP), TRUE);
-				EnableWindow(GetDlgItem(hDlg, IDC_BTN_PREV), TRUE);
-				EnableWindow(GetDlgItem(hDlg, IDC_BTN_NEXT), TRUE);
-				EnableWindow(GetDlgItem(hDlg, IDC_BTN_VOLUP), TRUE);
-				EnableWindow(GetDlgItem(hDlg, IDC_BTN_VOLDOWN), TRUE);
-			}
+			// Play
+			if (IsPlayOrPause() == TRUE)
+				SetDlgItemTextW(hDlg, IDC_BTN_PLAY, L"Pause");
+			else
+				SetDlgItemTextW(hDlg, IDC_BTN_PLAY, L"Play");
+
+			EnableWindow(GetDlgItem(hDlg, IDC_BTN_STOP), TRUE);
+			EnableWindow(GetDlgItem(hDlg, IDC_BTN_PREV), TRUE);
+			EnableWindow(GetDlgItem(hDlg, IDC_BTN_NEXT), TRUE);
+			EnableWindow(GetDlgItem(hDlg, IDC_BTN_VOLUP), TRUE);
+			EnableWindow(GetDlgItem(hDlg, IDC_BTN_VOLDOWN), TRUE);
+
 			break;
 		case IDC_BTN_NEXT:
 			OnNext();
@@ -153,4 +187,15 @@ INT_PTR CALLBACK MediaPlayer(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 		break;
 	}
 	return (INT_PTR)FALSE;
+}
+
+void OnDestroy()
+{
+	// Closes an MCI device or file associated
+	if (hMCIWnd != NULL)
+		MCIWndDestroy(hMCIWnd);
+	if (szFileName != NULL)
+		delete szFileName;
+
+	PostQuitMessage(0);
 }

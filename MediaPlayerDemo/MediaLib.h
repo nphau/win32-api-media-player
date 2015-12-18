@@ -6,46 +6,46 @@
 
 /*
  * MCIWndEnd: macro moves the current position to the end of the content.
-		* You can use this macro or explicitly send the MCI_SEEK message
+ * You can use this macro or explicitly send the MCI_SEEK message
  * MCIWndGetStart: macro retrieves the location of the beginning of the content of an MCI device or file.
-		* You can use this macro or explicitly send the MCIWNDM_GETSTART message.
- * MCIWndGetLength: macro retrieves the length of the content or file currently used by an MCI device. 
-		* You can use this macro or explicitly send the MCIWNDM_GETLENGTH message.
- * MCIWndOpen: macro opens an MCI device and associates it with an MCIWnd window. 
-		* For MCI devices that use data files, this macro can also open a specified data file,
-		* name a new file to be created, or display a dialog box to let the user select a file to open.
-		* You can use this macro or explicitly send the MCIWNDM_OPEN message.
+ * You can use this macro or explicitly send the MCIWNDM_GETSTART message.
+ * MCIWndGetLength: macro retrieves the length of the content or file currently used by an MCI device.
+ * You can use this macro or explicitly send the MCIWNDM_GETLENGTH message.
+ * MCIWndOpen: macro opens an MCI device and associates it with an MCIWnd window.
+ * For MCI devices that use data files, this macro can also open a specified data file,
+ * name a new file to be created, or display a dialog box to let the user select a file to open.
+ * You can use this macro or explicitly send the MCIWNDM_OPEN message.
  * MCIWndOpenDialog: macro opens a user-specified data file and corresponding type of MCI device
-		* and associates them with an MCIWnd window. This macro displays the Open dialog box for
-		* the user to select the data file to associate with an MCI window.
-		* You can use this macro or explicitly send the MCIWNDM_OPEN message.
+ * and associates them with an MCIWnd window. This macro displays the Open dialog box for
+ * the user to select the data file to associate with an MCI window.
+ * You can use this macro or explicitly send the MCIWNDM_OPEN message.
  * MCIWndGetVolume: macro retrieves the current volume setting of an MCI device.
-		* You can use this macro or explicitly send the MCIWNDM_GETVOLUME message.
-*/
+ * You can use this macro or explicitly send the MCIWNDM_GETVOLUME message.
+ * MCIWndGetFileName: macro retrieves the filename used by an MCI device.
+ * You can use this macro or explicitly send the MCIWNDM_GETFILENAME message.
+ */
 
 
 static HWND hMCIWnd = NULL;
 static long deltaVol = 200;
+static TCHAR * szFileName = NULL;
 
-// Check if this song is playing or not
-BOOL IsStillPlaying()
-{
-	return FALSE;
-}
 
 // Whether it can be open new song or not
 BOOL IsOpenNewSong(HWND hDlg)
 {
-	// If the song is playing
-	// Ask user
-	if (IsStillPlaying() == TRUE)
+	TCHAR * szMode = new TCHAR[100];
+	LONG  IsMode = MCIWndGetMode(hMCIWnd, szMode, 100);
+
+	// Playing ?
+	if (IsMode == MCI_MODE_PLAY)
 	{
 		// Ask user to open new song
 		// Yes: stopping current song and opening a new song
 		// No: Go on
 		int msgBoxId = MessageBox(
 			hDlg,
-			L"Bài hát đang được phát. Bạn có muốn play bài mới không?",
+			L"Music/Video is playing. Do you want to play a new music/Video?",
 			L"Play", MB_YESNO);
 		switch (msgBoxId)
 		{
@@ -58,7 +58,7 @@ BOOL IsOpenNewSong(HWND hDlg)
 	return TRUE;
 }
 
-/* 
+/*
  * To create a new MCIWndClass
  * Yes: success
  * No: fail
