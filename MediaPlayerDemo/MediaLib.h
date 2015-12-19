@@ -23,13 +23,25 @@
  * You can use this macro or explicitly send the MCIWNDM_GETVOLUME message.
  * MCIWndGetFileName: macro retrieves the filename used by an MCI device.
  * You can use this macro or explicitly send the MCIWNDM_GETFILENAME message.
+ * MCIWndPlayTo:
+ * macro plays the content of an MCI device from the current position to the specified ending
+ * location or until another command stops playback.
+ * If the specified ending location is beyond the end of the content,
+ * playback stops at the end of the content.
+ * MCIWndPlayTo macro plays the content of an MCI device from the current position to the specified ending location or until another command stops playback.
+ * If the specified ending location is beyond the end of the content, playback stops at the end of the content. You can use this macro or explicitly send the MCIWNDM_PLAYTO message.
+ * You can use this macro or explicitly send the MCIWNDM_PLAYTO message.
+ * MCIWndSeek: macro moves the playback position to the specified location in the content.
+ * You can use this macro or explicitly use the MCI_SEEK command.
+ * MCIWndStep: macro moves the current position in the content forward or backward by a specified increment.
+ * You can use this macro or explicitly send the MCI_STEP command.
  */
 
 
 static HWND hMCIWnd = NULL;
 static long deltaVol = 200;
-static TCHAR * szFileName = NULL;
-
+static long deltaForward = 50;
+static WCHAR * szFileName = NULL;
 
 // Whether it can be open new song or not
 BOOL IsOpenNewSong(HWND hDlg)
@@ -45,8 +57,8 @@ BOOL IsOpenNewSong(HWND hDlg)
 		// No: Go on
 		int msgBoxId = MessageBox(
 			hDlg,
-			L"Music/Video is playing. Do you want to play a new music/Video?",
-			L"Play", MB_YESNO);
+			L"Music/video is playing. Do you want to play a new music/Video?",
+			L"Play", MB_YESNO | MB_ICONQUESTION);
 		switch (msgBoxId)
 		{
 		case IDYES:
@@ -58,11 +70,6 @@ BOOL IsOpenNewSong(HWND hDlg)
 	return TRUE;
 }
 
-/*
- * To create a new MCIWndClass
- * Yes: success
- * No: fail
- */
 BOOL OnInitCreateWnd(HWND hDlg, HINSTANCE hInst)
 {
 	hMCIWnd = MCIWndCreate(
@@ -73,12 +80,43 @@ BOOL OnInitCreateWnd(HWND hDlg, HINSTANCE hInst)
 		// you can specify the following styles to use with MCIWnd windows
 		WS_CHILD | WS_VISIBLE |    // standard styles
 		MCIWNDF_NOPLAYBAR |        // hides toolbar 
-		MCIWNDF_NOTIFYMODE,
+		MCIWNDF_NOTIFYMODE | MCIWNDF_NOTIFYPOS,
 		NULL	// Null-terminated string indicating the name of an MCI device or data file to open.
 		);
 
 	// Khoi tao thanh cong
 	if (hMCIWnd != NULL) return TRUE;
 
+	return FALSE;
+}
+
+BOOL GetImageUrl(HWND hWnd, WCHAR* &path)
+{
+	OPENFILENAMEW ofn;
+
+	WCHAR szFile[MAX_PATH] = L"";
+
+	ZeroMemory(&ofn, sizeof(OPENFILENAME));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = hWnd;
+	ofn.lpstrFilter = L"Mp3 files (*.mp3)\0*.mp3\0Avi files (*.avi)\0*.avi\0Mp4 files (*.mp4)\0*.mp4\0All Files (*.*)\0*.*\0";
+
+	ofn.lpstrFile = szFile;
+	ofn.lpstrFile[0] = '\0';
+	ofn.lpstrTitle = L"Chọn file media";
+	ofn.nMaxFile = MAX_PATH;
+	ofn.nFilterIndex = 1;
+	ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST;
+	ofn.lpstrDefExt = L"txt";
+
+	path = NULL;
+
+	if (GetOpenFileNameW(&ofn) == TRUE)
+	{
+		path = new WCHAR[MAX_PATH];
+		wcscpy(path, szFile);
+		return TRUE;
+	}
 	return FALSE;
 }

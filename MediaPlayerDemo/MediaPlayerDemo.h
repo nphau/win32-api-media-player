@@ -45,19 +45,27 @@ BOOL OnOpen(HWND hDlg)
 
 		if (hMCIWnd != NULL)
 		{
-			szFileName = new TCHAR[MAX_PATH];
+			if (GetImageUrl(hDlg, szFileName) == FALSE)
+				return FALSE;
 
-			if (MCIWndOpenDialog(hMCIWnd) == 0)
+			if (szFileName == NULL)
 			{
-				// Get file name
-				MCIWndGetFileName(hMCIWnd, szFileName, MAX_PATH);
-			}
-			else
-			{
+				szFileName = new WCHAR[MAX_PATH];
 				wcscpy(szFileName, szTitle);
 			}
-		}
+			else
+				MCIWndOpen(hMCIWnd, szFileName, MAX_PATH);
 
+			//if (MCIWndOpenDialog(hMCIWnd) == 0)
+			//{
+			//	// Get file name
+			//	MCIWndGetFileName(hMCIWnd, szFileName, MAX_PATH);
+			//}
+			//else
+			//{
+			//	wcscpy(szFileName, szTitle);
+			//}
+		}
 		return TRUE;
 	}
 	return FALSE;
@@ -69,17 +77,30 @@ BOOL OnOpen(HWND hDlg)
 BOOL OnStop()
 {
 	MCIWndStop(hMCIWnd);
+	MCIWndSeek(hMCIWnd, MCIWND_START);
 	return TRUE;
 }
 
 void OnPrev()
 {
-
+	long seek = MCIWndGetPosition(hMCIWnd) - deltaForward;
+	if (seek > 0)
+	{
+		MCIWndPause(hMCIWnd);
+		MCIWndSeek(hMCIWnd, seek);
+		MCIWndPlay(hMCIWnd);
+	}
 }
 
 void OnNext()
 {
-
+	long seek = MCIWndGetPosition(hMCIWnd) + deltaForward;
+	if (seek < MCIWndGetEnd(hMCIWnd))
+	{
+		MCIWndPause(hMCIWnd);
+		MCIWndSeek(hMCIWnd, seek);
+		MCIWndPlay(hMCIWnd);
+	}
 }
 
 
@@ -141,7 +162,8 @@ INT_PTR CALLBACK MediaPlayer(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			{
 				EnableWindow(GetDlgItem(hDlg, IDC_BTN_PLAY), TRUE);
 				SetWindowTextW(hDlg, szFileName);
-
+				EnableWindow(GetDlgItem(hDlg, IDC_BTN_VOLUP), TRUE);
+				EnableWindow(GetDlgItem(hDlg, IDC_BTN_VOLDOWN), TRUE);
 				// To force press Play Button
 				SendMessage(hDlg, WM_COMMAND, IDC_BTN_PLAY, 0);
 			}
@@ -158,7 +180,7 @@ INT_PTR CALLBACK MediaPlayer(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			}
 			break;
 		case IDC_BTN_PREV:
-
+			OnPrev();
 			break;
 		case IDC_BTN_PLAY:
 			// Play
@@ -172,7 +194,6 @@ INT_PTR CALLBACK MediaPlayer(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 			EnableWindow(GetDlgItem(hDlg, IDC_BTN_NEXT), TRUE);
 			EnableWindow(GetDlgItem(hDlg, IDC_BTN_VOLUP), TRUE);
 			EnableWindow(GetDlgItem(hDlg, IDC_BTN_VOLDOWN), TRUE);
-
 			break;
 		case IDC_BTN_NEXT:
 			OnNext();
